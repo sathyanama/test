@@ -1,0 +1,29 @@
+from transformers import T5Tokenizer
+from optimum.onnxruntime import ORTModelForSeq2SeqLM
+import os
+
+# ✅ Use T5-Large (or change to "t5-base" if needed)
+model_name = "t5-large"  # Change to "t5-base" if required
+onnx_model_dir = "onnx_t5_large"
+
+# ✅ Load Pretrained Model & Tokenizer
+tokenizer = T5Tokenizer.from_pretrained(model_name)
+
+# ✅ Export to ONNX using Optimum
+model = ORTModelForSeq2SeqLM.from_pretrained(model_name, export=True)
+model.save_pretrained(onnx_model_dir)
+
+# ✅ Verify Model Size
+onnx_model_path = os.path.join(onnx_model_dir, "model.onnx")
+onnx_size = os.path.getsize(onnx_model_path) / (1024 * 1024)  # Convert bytes to MB
+
+print(f"✅ ONNX Model Successfully Saved: {onnx_model_path}")
+print(f"✅ ONNX Model Size: {onnx_size:.2f} MB")
+
+# ✅ Check If Model Exported Correctly
+if onnx_size < 1000:  # If less than 1GB, it's incomplete
+    print("❌ ERROR: Model file is too small! ONNX export failed.")
+    os.remove(onnx_model_path)  # Delete invalid ONNX model
+    exit(1)
+else:
+    print("✅ Model exported correctly. Ready for Java implementation.")
