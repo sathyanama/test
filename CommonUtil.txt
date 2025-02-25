@@ -1,0 +1,62 @@
+package com.example.util;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.ui.Model;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
+import com.example.service.LogInfoService;
+import com.example.service.UserService;
+import com.example.model.User;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+@Component
+public class CommonUtil {
+
+    private static final Logger logger = LoggerFactory.getLogger(CommonUtil.class);
+
+    private final LogInfoService logInfoService;
+    private final UserService userService;
+
+    @Autowired
+    public CommonUtil(LogInfoService logInfoService, UserService userService) {
+        this.logInfoService = logInfoService;
+        this.userService = userService;
+    }
+
+    public void addUserDetailsToModel(Model model, String screenId, String returnPage, HttpServletRequest request) {
+        try {
+            HttpSession session = request.getSession();
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String username = authentication.getName();
+
+            if (username == null) {
+                logger.warn("Unauthorized access. Redirecting to login.");
+            }
+
+            logInfoService.logActivity(session.getId(), screenId, username);
+
+            User user = userService.getUserByUsername(username);
+            model.addAttribute("username", username);
+            model.addAttribute("role", user.getRole());
+            model.addAttribute("team", user.getTeam());
+            model.addAttribute("location", user.getLocation());
+
+            // Add attributes to the session
+            session.setAttribute("username", username);
+            session.setAttribute("role", user.getRole());
+            session.setAttribute("team", user.getTeam());
+            session.setAttribute("location", user.getLocation());
+
+            logger.info("User details added to model: Username={}, Team={}, Location={}",
+                    username, user.getTeam(), user.getLocation());
+
+        } catch (Exception ex) {
+            logInfoService.logActivity(request.getSession().getId(), screenId, "unknown", ex.getMessage(), "500");
+            logger.error("Error adding user details to model", ex);
+        }
+    }
+}
