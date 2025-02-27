@@ -1,0 +1,29 @@
+Before
+
+return incidents.stream().limit(5).collect(Collectors.toList());
+
+
+After
+
+List<ChatIncident> sortedIncidents = incidents.stream()
+        .sorted(Comparator.comparingDouble(incident -> -cosineSimilarity(queryEmbedding, incident.getEmbedding())))
+        .limit(5)
+        .collect(Collectors.toList());
+
+// 🔥 Debugging: Print incidents and their similarities
+System.out.println("Total incidents available: " + incidents.size());
+sortedIncidents.forEach(incident -> {
+    System.out.println("Incident ID: " + incident.getId() +
+            ", Similarity: " + cosineSimilarity(queryEmbedding, incident.getEmbedding()));
+});
+
+// ✅ Ensure at least 5 incidents are returned
+if (sortedIncidents.size() < 5 && incidents.size() >= 5) {
+    System.out.println("⚠️ Less than 5 incidents matched. Filling up with additional results.");
+    return incidents.stream().limit(5).collect(Collectors.toList());  // Return any available top 5
+} else if (sortedIncidents.isEmpty()) {
+    System.out.println("⚠️ No incidents passed the filtering. Returning at least one result.");
+    return incidents.stream().limit(1).collect(Collectors.toList());  // Ensure at least 1 incident is returned
+}
+
+return sortedIncidents;
