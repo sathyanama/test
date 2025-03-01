@@ -1,0 +1,29 @@
+<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+		
+		<resources>
+        <resource>
+            <directory>src/main/resources</directory>
+            <includes>
+                <include>**/*</include>
+            </includes>
+        </resource>
+        <resource>
+            <directory>${project.basedir}/logs</directory>
+            <targetPath>logs</targetPath>
+            <includes>
+                <include>**/*</include>
+            </includes>
+            <filtering>false</filtering>
+        </resource>
+    </resources>
+	
+
+<property name="LOGS" value="${user.dir}/logs" />
+<file>${LOGS}/application.log</file>
+	
