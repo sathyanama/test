@@ -1,0 +1,43 @@
+import torch
+import numpy as np
+from transformers import T5EncoderModel, T5Tokenizer
+import onnx
+
+# ✅ Define paths
+MODEL_DIR = "c:/users/abc/downloads/code-baton/jina-embedding-s-en-v1"
+ONNX_MODEL_PATH = "c:/users/abc/downloads/code-baton/sentence_transformer.onnx"
+
+# ✅ Load T5 Encoder Model (Not AutoModel)
+print(f"🔄 Loading T5 Encoder model from {MODEL_DIR}...")
+tokenizer = T5Tokenizer.from_pretrained(MODEL_DIR)
+model = T5EncoderModel.from_pretrained(MODEL_DIR)
+
+# ✅ Ensure model is in eval mode
+model.eval()
+
+# ✅ Create dummy input sentence & tokenize
+dummy_text = ["This is a test sentence."]
+inputs = tokenizer(dummy_text, return_tensors="pt")
+
+# ✅ Extract tokenized inputs
+input_ids = inputs["input_ids"]
+attention_mask = inputs["attention_mask"]
+
+# ✅ Export only the T5 encoder to ONNX
+torch.onnx.export(
+    model,
+    (input_ids, attention_mask),  # ✅ Corrected input format for T5
+    ONNX_MODEL_PATH,
+    export_params=True,
+    opset_version=13,
+    do_constant_folding=True,
+    input_names=["input_ids", "attention_mask"],
+    output_names=["encoder_hidden_states"],  # ✅ Correct output name
+    dynamic_axes={
+        "input_ids": {0: "batch_size", 1: "sequence_length"},
+        "attention_mask": {0: "batch_size", 1: "sequence_length"},
+        "encoder_hidden_states": {0: "batch_size", 1: "sequence_length", 2: "hidden_size"},
+    },
+)
+
+print(f"✅ ONNX conversion completed successfully! Model saved at {ONNX_MODEL_PATH}")
