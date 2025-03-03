@@ -1,0 +1,38 @@
+import torch
+import onnx
+import numpy as np
+import onnxruntime
+from sentence_transformers import SentenceTransformer
+
+# ✅ Define paths
+MODEL_DIR = "c:/users/abc/downloads/code-baton/jina-embedding-s-en-v1"  # Your model path
+ONNX_MODEL_PATH = "c:/users/abc/downloads/code-baton/sentence_transformer.onnx"
+
+# ✅ Load the SentenceTransformer model
+print(f"🔄 Loading SentenceTransformer model from {MODEL_DIR}...")
+model = SentenceTransformer(MODEL_DIR)
+
+# ✅ Ensure model is in eval mode
+model.eval()
+
+# ✅ Create dummy input sentence
+dummy_text = ["This is a test sentence."]
+dummy_embedding = model.encode(dummy_text, convert_to_tensor=True)
+
+# ✅ Convert to NumPy array for ONNX export
+input_ids = torch.tensor(dummy_embedding.cpu().numpy(), dtype=torch.float32)
+
+# ✅ Export model to ONNX
+torch.onnx.export(
+    model,
+    input_ids,  # ✅ Corrected input format (2D tensor)
+    ONNX_MODEL_PATH,
+    export_params=True,
+    opset_version=13,
+    do_constant_folding=True,
+    input_names=["input_embeddings"],  # ✅ Uses embeddings, not tokenized input
+    output_names=["sentence_embedding"],
+    dynamic_axes={"input_embeddings": {0: "batch_size", 1: "embedding_size"}},
+)
+
+print(f"✅ ONNX conversion completed successfully! Model saved at {ONNX_MODEL_PATH}")
