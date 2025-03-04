@@ -1,0 +1,35 @@
+document.addEventListener("DOMContentLoaded", function() {
+    // Load existing handover details when the page loads
+    loadHandover();
+
+    // Get all datetime-local inputs
+    const dateInputs = document.querySelectorAll("input[type='datetime-local']");
+
+    dateInputs.forEach(input => {
+        input.addEventListener("input", function() { 
+            this.blur(); // Auto-close picker
+            this.dispatchEvent(new Event('change')); // Trigger change event
+        });
+
+        input.addEventListener("change", function() {
+            // Display confirmation message
+            const message = document.createElement("div");
+            message.textContent = "Date selected: " + this.value;
+            message.style.color = "#4FC3F7"; // Light blue text
+            message.style.fontSize = "12px";
+            message.style.marginTop = "5px";
+
+            // Remove previous messages
+            const existingMessage = this.nextElementSibling;
+            if (existingMessage && existingMessage.classList.contains("date-confirm")) {
+                existingMessage.remove();
+            }
+
+            message.classList.add("date-confirm");
+            this.after(message);
+
+            // Auto-remove message after 3 seconds
+            setTimeout(() => message.remove(), 3000);
+        });
+    });
+});
