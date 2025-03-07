@@ -1,0 +1,17 @@
+import os
+
+# 🔹 Update this path to your actual Mistral model directory
+MODEL_DIR = "C:/models/mistral-7b/"  # Change if needed
+
+# Output file
+output_file = os.path.join(MODEL_DIR, "pytorch_model.bin")
+
+# Merge all part files into a single file
+with open(output_file, "wb") as full_model:
+    for part in sorted(os.listdir(MODEL_DIR)):  # Ensure parts are in order
+        if part.startswith("Mistral-7B-Instruct-v0.2_part_"):  # Select only the part files
+            part_path = os.path.join(MODEL_DIR, part)
+            with open(part_path, "rb") as part_file:
+                full_model.write(part_file.read())
+
+print("✅ Model merged successfully into pytorch_model.bin")
