@@ -1,0 +1,44 @@
+import os
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM
+
+# ✅ Optimize CPU Performance
+os.environ["OMP_NUM_THREADS"] = "2"  # Limit CPU threads
+
+# 🔹 Update with your actual model directory
+MODEL_PATH = "C:/models/phi3-mini-128k/"
+
+# ✅ Load tokenizer
+tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
+
+# ✅ Load model (Only Once)
+model = AutoModelForCausalLM.from_pretrained(
+    MODEL_PATH,
+    torch_dtype=torch.float32,  # CPU-friendly format
+    device_map="auto",
+    trust_remote_code=True
+)
+
+# 🔹 Keep running multiple test cases
+while True:
+    input_text = input("\nEnter a sentence to correct (or type 'exit' to stop): ")
+    if input_text.lower() == "exit":
+        break
+
+    # ✅ Modify input prompt to prevent explanations
+    formatted_input = f"Correct this sentence: {input_text}. Return only the corrected sentence without explanation."
+
+    input_ids = tokenizer(formatted_input, return_tensors="pt").input_ids.to(model.device)
+
+    # ✅ Generate corrected text (With repetition_penalty to prevent duplicates)
+    output_ids = model.generate(
+        input_ids,
+        max_new_tokens=50,
+        do_sample=False,  # No randomness
+        num_beams=1,      # Faster decoding
+        repetition_penalty=1.2  # Prevents repeating phrases
+    )
+    revised_text = tokenizer.decode(output_ids[0], skip_special_tokens=True)
+
+    print("\n🔹 Original Text:", input_text)
+    print("✅ Revised Text:", revised_text)
