@@ -1,0 +1,10 @@
+def clean_output(output_text):
+    # Remove instruction tags and unwanted formatting
+    output_text = re.sub(r"\[INST\].*?\[/INST\]", "", output_text, flags=re.DOTALL).strip()
+    output_text = re.sub(r"<<SYS.*?>>", "", output_text, flags=re.DOTALL).strip()  # Remove <<SYS>> block
+    output_text = re.sub(r"\[/SYS\]", "", output_text).strip()
+    output_text = re.sub(r"\[/INST\]", "", output_text).strip()  # ✅ Removes [/INST]
+    output_text = re.sub(r"<<INST>.*?", "", output_text, flags=re.DOTALL).strip()  # ✅ Removes <<INST> artifacts
+    output_text = re.sub(r"Final Answer:.*", "", output_text).strip()  # ✅ Removes "Final Answer" unwanted text
+    output_text = re.sub(r"Corrected Text:\s*", "", output_text, flags=re.MULTILINE).strip()  # ✅ Removes duplicate "Corrected Text:"
+    return output_text
