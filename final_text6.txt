@@ -1,0 +1,161 @@
+import transformers
+import torch
+import warnings
+import time
+import threading
+from itertools import cycle
+import sys
+import re
+
+warnings.simplefilter("ignore", category=UserWarning)  # Suppress unnecessary warnings
+
+# Set the model path
+model_id = "Meta-Llama-3-8B-Instruct"
+
+# Load the tokenizer
+tokenizer = transformers.AutoTokenizer.from_pretrained(
+    model_id,
+    local_files_only=True,
+    trust_remote_code=True
+)
+
+# Load the model with optimized settings
+model = transformers.AutoModelForCausalLM.from_pretrained(
+    model_id,
+    torch_dtype=torch.float32,
+    device_map="cpu",
+    low_cpu_mem_usage=True,
+    local_files_only=True,
+    trust_remote_code=True
+)
+
+# Optimize model settings
+model.config.use_cache = True
+model.config.max_new_tokens = 2048  # Increased for longer output
+model.config.temperature = 0.7
+model.config.top_p = 0.95
+model.config.repetition_penalty = 1.2
+model.config.attn_implementation = "eager"
+model.config.cache_position = "start"
+
+# Create text generation pipeline
+pipeline = transformers.pipeline(
+    "text-generation",
+    model=model,
+    tokenizer=tokenizer
+)
+
+# Spinner function to indicate processing
+stop_spinner = threading.Event()
+def spinner(estimated_time):
+    start_time = time.time()
+    for symbol in cycle(["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]):
+        elapsed_time = time.time() - start_time
+        remaining_time = max(estimated_time - elapsed_time, 0)
+        if stop_spinner.is_set():
+            break
+        print(f"\rProcessing... {symbol} | Estimated time left: {remaining_time:.1f}s", end="", flush=True)
+        time.sleep(0.2)
+
+# Function to clean generated output
+def clean_output(output_text):
+    output_text = re.sub(r"\[INST\].*?\[/INST\]", "", output_text, flags=re.DOTALL)
+    output_text = re.sub(r"<<SYS.*?>>", "", output_text, flags=re.DOTALL)
+    output_text = re.sub(r"<<INST>>.*?", "", output_text, flags=re.DOTALL)
+    output_text = re.sub(r"\[/SYS\]", "", output_text)
+    output_text = re.sub(r"\[/INST\]", "", output_text)
+    output_text = re.sub(r"(?i)(Corrected Text:)+", "", output_text).strip()
+    output_text = re.sub(r"(?i)Final Answer:.*", "", output_text).strip()
+    output_text = re.sub(r"(?i)note:.*", "", output_text).strip()
+    output_text = re.sub(r"`{3}.*?`{3}", "", output_text, flags=re.DOTALL).strip()  # Remove code blocks like ```html```
+    output_text = re.sub(r"<.*?>", "", output_text).strip()  # Remove HTML tags like </sys>
+
+    lines = output_text.strip().splitlines()
+    formatted = []
+    for line in lines:
+        if re.match(r"^\s*[-*•\d+\.]+\s+", line):
+            formatted.append(line.strip())
+        elif line.strip():
+            formatted.append(line.strip())
+    return "\n".join(formatted)
+
+# Function to correct text grammar
+def correct_text(input_text):
+    prompt = f"""[INST] <<SYS>>\nYou are a helpful assistant that corrects grammar, spelling, and punctuation mistakes.\nOnly return the corrected version of the input text.\nDo not explain corrections, do not repeat instructions, do not include extra formatting like 'Note:', 'Corrected Text:', or any tags.\nPreserve bullet points and paragraph formatting as in the original.\n<</SYS>>\n\n{input_text}\n[/INST]"""
+
+    tokens_to_generate = min(2048, len(input_text.split()) * 4)
+    avg_time_per_token = 0.04 if torch.cuda.is_available() else 0.08
+    estimated_total_time = tokens_to_generate * avg_time_per_token
+
+    print(f"\nEstimated response time: {estimated_total_time:.1f} seconds.")
+    stop_spinner.clear()
+    spinner_thread = threading.Thread(target=spinner, args=(estimated_total_time,))
+    spinner_thread.start()
+
+    try:
+        start_time = time.time()
+        outputs = pipeline(
+            prompt,
+            max_new_tokens=tokens_to_generate,
+            eos_token_id=tokenizer.eos_token_id,
+            do_sample=True,
+            temperature=model.config.temperature,
+            top_p=model.config.top_p,
+            num_beams=1,
+            num_return_sequences=1,
+            repetition_penalty=model.config.repetition_penalty,
+            early_stopping=True
+        )
+
+        stop_spinner.set()
+        spinner_thread.join()
+
+        actual_time_taken = time.time() - start_time
+
+        corrected_text = outputs[0]["generated_text"].strip()
+        corrected_text = clean_output(corrected_text)
+
+        print(f"\nProcessed in {actual_time_taken:.1f} seconds.")
+        return corrected_text
+
+    except KeyboardInterrupt:
+        stop_spinner.set()
+        spinner_thread.join()
+        print("\nProcess interrupted by user (Ctrl + C). Exiting gracefully.\n")
+        sys.exit(0)
+
+# Main loop for user input
+print("\nEnter text for correction (Paste multi-line text and press Enter twice to process, type 'quit' to exit):\n")
+
+try:
+    while True:
+        print("> (Paste your text and press Enter twice to process)")
+
+        lines = []
+        blank_count = 0
+        while True:
+            try:
+                line = input()
+                if line.strip().lower() == "quit":
+                    print("\nExiting. Goodbye!\n")
+                    sys.exit(0)
+                if line.strip() == "":
+                    blank_count += 1
+                    if blank_count == 2:
+                        break
+                else:
+                    blank_count = 0
+                    lines.append(line)
+            except EOFError:
+                break
+
+        input_text = "\n".join(lines).strip()
+
+        if input_text:
+            corrected_text = correct_text(input_text)
+            print("\nCorrected Text:\n" + corrected_text + "\n")
+
+except KeyboardInterrupt:
+    stop_spinner.set()
+    print("\nProcess interrupted by user (Ctrl + C). Exiting safely.\n")
+    sys.exit(0)
