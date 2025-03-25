@@ -1,0 +1,16 @@
+import psutil
+import multiprocessing
+
+ram = psutil.virtual_memory().total / (1024 ** 3)
+cpu = multiprocessing.cpu_count()
+
+print(f"Total RAM: {ram:.2f} GB")
+print(f"CPU Cores: {cpu}")
+
+
+Check Logical CPU Cores
+(Get-CimInstance Win32_Processor).NumberOfLogicalProcessors
+
+Check Total Physical RAM:
+Get-CimInstance Win32_ComputerSystem | Select-Object TotalPhysicalMemory
+
