@@ -1,0 +1,18 @@
+databaseChangeLog:
+  - changeSet:
+      id: 008_rca_folder
+      author: sathya
+      changes:
+        - sql:
+            dbms: oracle
+            splitStatements: false
+            stripComments: true
+            sql: |
+              CREATE TABLE rca_folder (
+                id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                folder_name VARCHAR2(100),
+                folder_created_by VARCHAR2(100),
+                folder_created_on TIMESTAMP,
+                update_user VARCHAR2(100),
+                update_date TIMESTAMP
+              );
