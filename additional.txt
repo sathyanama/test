@@ -1,0 +1,60 @@
+@Test
+    public void testGetHandoverHeading_US() throws Exception {
+        Principal mockPrincipal = () -> "testuser";
+
+        User dummyUser = new User();
+        dummyUser.setTeam("DMC");
+        dummyUser.setLocation("US");
+
+        HandoverTracker dummyTracker = new HandoverTracker();
+        dummyTracker.setHoItem(""); // match real returned values
+        dummyTracker.setStartDate(LocalDateTime.of(2025, 3, 28, 7, 30));
+        dummyTracker.setEndDate(LocalDateTime.of(2025, 3, 29, 19, 30));
+
+        when(userService.getUserByUsername("testuser")).thenReturn(dummyUser);
+        when(handoverService.getHandoverByCurrentTime(eq("DMC"), any())).thenReturn(Optional.of(dummyTracker));
+        when(handoverService.getHandoverHeading("US")).thenReturn("Mock Handover");
+
+        mockMvc.perform(get("/api/handover")
+                .param("location", "US")
+                .principal(mockPrincipal))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.heading").value("Mock Handover")); // ✅ FIXED
+    }
+	
+
+
+@Test
+    public void testRetrieveHandoverByTeamAndDates() throws Exception {
+        HandoverTracker tracker = new HandoverTracker();
+        tracker.setHoItem("Night Ops");
+
+        when(handoverService.getHandoverByTeamAndDates(anyString(), any(), any()))
+            .thenReturn(Optional.of(tracker)); // correct method here!
+
+        mockMvc.perform(get("/api/handover/retrieve")
+                .param("team", "DMC")
+                .param("startDate", LocalDateTime.now().toString())
+                .param("endDate", LocalDateTime.now().plusHours(1).toString()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.handover.hoItem").value("Night Ops"));
+    }
+
+
+@Test
+    void testChatResponseSettersAndGetters() {
+        ChatIncident incident = new ChatIncident();
+        incident.setId(2L);
+        incident.setCustomerExp("Another summary");
+        incident.setAnalysis("Another analysis");
+
+        ChatIncidentController.ChatResponse response = new ChatIncidentController.ChatResponse(new ArrayList<>());
+        List<ChatIncident> list = new ArrayList<>();
+        list.add(incident);
+
+        response.setIncidents(list); // this covers the setter
+        List<ChatIncident> result = response.getIncidents(); // this covers the getter
+
+        assertEquals(1, result.size());
+        assertEquals("Another summary", result.get(0).getCustomerExp());
+    }	
