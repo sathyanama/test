@@ -1,0 +1,124 @@
+@Test
+    public void testFindLast50RecordsPaginated() {
+        IncidentTracker incident = new IncidentTracker();
+        incident.setIncidentNumber("INC9999");
+
+        List<IncidentTracker> incidents = List.of(incident);
+        Page<IncidentTracker> mockPage = new PageImpl<>(incidents);
+
+        when(incidentTrackerRepository.findByCreateDatetimeAfterAndTeamOrderByCreateDatetimeDesc(any(LocalDateTime.class), eq("DMC"), any(Pageable.class)))
+                .thenReturn(mockPage);
+
+        Page<IncidentTracker> result = incidentTrackerService.findLast50RecordsPaginated("DMC", 1, 10);
+
+        assertEquals(1, result.getTotalElements());
+        assertEquals("INC9999", result.getContent().get(0).getIncidentNumber());
+    }
+
+    @Test
+    public void testGetESTTime() {
+        LocalDateTime estTime = incidentTrackerService.getESTTime(9, 30, 0);
+        assertEquals(9, estTime.getHour());
+        assertEquals(30, estTime.getMinute());
+    }
+
+    @Test
+    public void testDeleteIncident_successful() {
+        IncidentTracker incident = new IncidentTracker();
+        incident.setIncidentNumber("INC1234");
+
+        when(incidentTrackerRepository.findByIncidentNumber("INC1234"))
+                .thenReturn(Optional.of(incident));
+
+        incidentTrackerService.deleteIncident("INC1234");
+        verify(incidentTrackerRepository).deleteByIncidentNumber("INC1234");
+    }
+
+    @Test
+    public void testDeleteIncident_notFound_shouldThrowException() {
+        when(incidentTrackerRepository.findByIncidentNumber("INC404"))
+                .thenReturn(Optional.empty());
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            incidentTrackerService.deleteIncident("INC404");
+        });
+    }
+
+    @Test
+    public void testSearchPaginated() {
+        IncidentTracker incident = new IncidentTracker();
+        incident.setIncidentNumber("INCSEARCH");
+
+        Page<IncidentTracker> page = new PageImpl<>(List.of(incident));
+        when(incidentTrackerRepository.searchByQueryAndTeam(eq("network"), eq("DMC"), any(Pageable.class))).thenReturn(page);
+
+        Page<IncidentTracker> result = incidentTrackerService.searchPaginated("network", "DMC", 1, 10);
+        assertEquals(1, result.getTotalElements());
+        assertEquals("INCSEARCH", result.getContent().get(0).getIncidentNumber());
+    }
+
+    @Test
+    public void testFindLast20ByTeam() {
+        IncidentTracker incident = new IncidentTracker();
+        incident.setTeam("DMC");
+
+        when(incidentTrackerRepository.findTop20ByTeam(eq("DMC"), any(Pageable.class)))
+                .thenReturn(List.of(incident));
+
+        List<IncidentTracker> results = incidentTrackerService.findLast20ByTeam("DMC");
+        assertEquals(1, results.size());
+        assertEquals("DMC", results.get(0).getTeam());
+    }
+
+    @Test
+    public void testSaveIncident() {
+        IncidentTracker incident = new IncidentTracker();
+        incident.setIncidentNumber("INCSAVE");
+
+        when(incidentTrackerRepository.save(incident)).thenReturn(incident);
+
+        IncidentTracker result = incidentTrackerService.saveIncident(incident);
+        assertEquals("INCSAVE", result.getIncidentNumber());
+    }
+
+    @Test
+    public void testSaveAll() {
+        List<IncidentTracker> incidents = Collections.singletonList(new IncidentTracker());
+        incidentTrackerService.saveAll(incidents);
+        verify(incidentTrackerRepository).saveAll(incidents);
+    }
+
+    @Test
+    public void testFindIncidentsBySearchCriteria() {
+        when(incidentTrackerRepository.findIncidentsBySearchCriteria("query", "DMC"))
+                .thenReturn(List.of(new IncidentTracker()));
+
+        List<IncidentTracker> results = incidentTrackerService.findIncidentsBySearchCriteria("query", "DMC");
+        assertEquals(1, results.size());
+    }
+
+    @Test
+    public void testGetIncidentByNumber() {
+        IncidentTracker incident = new IncidentTracker();
+        incident.setIncidentNumber("INCNUMBER");
+
+        when(incidentTrackerRepository.findByIncidentNumber("INCNUMBER"))
+                .thenReturn(Optional.of(incident));
+
+        Optional<IncidentTracker> result = incidentTrackerService.getIncidentByNumber("INCNUMBER");
+        assertTrue(result.isPresent());
+        assertEquals("INCNUMBER", result.get().getIncidentNumber());
+    }
+
+    @Test
+    public void testGetFlaggedIncidents() {
+        IncidentTracker incident = new IncidentTracker();
+        incident.setIncidentNumber("FLAGGED1");
+
+        when(incidentTrackerRepository.countFlaggedIncidents(anyString(), any(), any())).thenReturn(1L);
+        when(incidentTrackerRepository.findFlaggedIncidents(anyString(), any(), any())).thenReturn(List.of(incident));
+
+        List<IncidentTracker> results = incidentTrackerService.getFlaggedIncidents("DMC", "SG");
+        assertEquals(1, results.size());
+        assertEquals("FLAGGED1", results.get(0).getIncidentNumber());
+    }
