@@ -1,0 +1,103 @@
+# Replace curly quotes, backticks, em dashes, etc.
+splunk_query = splunk_query \
+    .replace('“', '"').replace('”', '"') \
+    .replace('‘', '"').replace('’', '"') \
+    .replace('–', '-') \
+    .replace('`', '"') \
+    .strip()
+
+# Ensure it starts with 'search'
+if not splunk_query.lower().startswith("search"):
+    splunk_query = "search " + splunk_query
+
+
+import re
+# Remove any misuse of | where message= or other invalid fields
+splunk_query = re.sub(r'\|\s*where\s+message\s*=.*?(?=(\||$))', '', splunk_query)
+
+
+prmpt
+
+Only use the fields: index, sourcetype, source, urlPath, httpCode, and earliest.
+Do NOT use any other fields like message, _raw, _time, or log content fields.
+Generate only one `search` statement without any `| where` clauses.
+
+Now convert the user’s request into a valid Splunk query using the above rules.
+Return only the query string starting with: search
+
+
+
+controller update
+
+List<Map<String, String>> ciTableRows = new ArrayList<>();
+StringBuilder ciCombined = new StringBuilder();
+StringBuilder sealIds = new StringBuilder();
+
+String[] ciItems = incident.getCiItem().split("\\r?\\n");
+String[] sealIdItems = incident.getCiItemSealId().split("\\r?\\n");
+
+int rowCount = Math.min(ciItems.length, sealIdItems.length);
+
+for (int i = 0; i < rowCount; i++) {
+    String ciItem = ciItems[i].trim();
+    String sealId = sealIdItems[i].trim();
+
+    // prepare table row
+    Map<String, String> row = new HashMap<>();
+    row.put("item", ciItem);
+    row.put("seal", sealId);
+    ciTableRows.add(row);
+
+    // prepare hidden field value
+    ciCombined.append(ciItem).append(" ").append(sealId).append("\n");
+    sealIds.append(sealId).append("\n");
+}
+
+model.addAttribute("ciTableRows", ciTableRows);
+model.addAttribute("ciItemListCombined", ciCombined.toString().trim());   // one multiline string
+model.addAttribute("ciSealIdListCombined", sealIds.toString().trim());
+
+
+======================
+
+<div id="ciSection" class="section-content" style="display: block;">
+    <h4>CI Section</h4>
+
+    <table class="ci-table">
+        <thead>
+            <tr>
+                <th>CI Item</th>
+                <th>Seal ID</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="row : ${ciTableRows}">
+                <td th:text="${row['item']}">CI Item</td>
+                <td th:text="${row['seal']}">Seal ID</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Hidden input with joined values (newline separated) -->
+    <input type="hidden" name="ciItemList" th:value="${ciItemListCombined}" />
+    <input type="hidden" name="ciItemSealIdList" th:value="${ciItemSealIdListCombined}" />
+</div>
+
+
+.ci-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+.ci-table th, .ci-table td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: left;
+}
+
+.ci-table th {
+    background-color: #f4f4f4;
+    font-weight: bold;
+}
