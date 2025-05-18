@@ -1,0 +1,26 @@
+.impact-inline-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+    padding-bottom: 10px;
+    align-items: baseline;
+}
+
+.impact-pair {
+    display: flex;
+    align-items: baseline;
+    gap: 8px; /* spacing between label and value */
+    min-width: 280px; /* adjust depending on screen size */
+}
+
+.impact-pair label {
+    font-weight: bold;
+    color: #4FC3F7;
+    min-width: 110px; /* align labels */
+}
+
+.impact-pair span {
+    color: #E0E0E0;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
