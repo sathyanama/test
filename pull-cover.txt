@@ -1,0 +1,64 @@
+@Test
+void causedByPresentAndIndexInRange() {
+    List<String> types = List.of("Caused By: Patch"); // index 0
+    List<String> numbers = List.of("CR99999");
+
+    IncidentTracker incident = new IncidentTracker();
+
+    for (int i = 0; i < types.size(); i++) {
+        String type = types.get(i).trim().toLowerCase();
+        if (type.contains("caused by")) {
+            String number = (i < numbers.size()) ? numbers.get(i) : "";
+            incident.setCausedByChange("Y");
+            incident.setChangeNumber(number);
+            break;
+        }
+    }
+
+    assertEquals("Y", incident.getCausedByChange());
+    assertEquals("CR99999", incident.getChangeNumber());
+}
+
+
+@Test
+void causedByPresentButIndexOutOfRange() {
+    List<String> types = List.of("Caused By: Infra");
+    List<String> numbers = new ArrayList<>(); // empty list, size = 0
+
+    IncidentTracker incident = new IncidentTracker();
+
+    for (int i = 0; i < types.size(); i++) {
+        String type = types.get(i).trim().toLowerCase();
+        if (type.contains("caused by")) {
+            String number = (i < numbers.size()) ? numbers.get(i) : "";
+            incident.setCausedByChange("Y");
+            incident.setChangeNumber(number);
+            break;
+        }
+    }
+
+    assertEquals("Y", incident.getCausedByChange());
+    assertEquals("", incident.getChangeNumber()); // fallback to empty string
+}
+
+
+@Test
+void causedByNotPresent() {
+    List<String> types = List.of("Root Cause", "Update");
+    List<String> numbers = List.of("CR100", "CR200");
+
+    IncidentTracker incident = new IncidentTracker();
+
+    for (int i = 0; i < types.size(); i++) {
+        String type = types.get(i).trim().toLowerCase();
+        if (type.contains("caused by")) {
+            String number = (i < numbers.size()) ? numbers.get(i) : "";
+            incident.setCausedByChange("Y");
+            incident.setChangeNumber(number);
+            break;
+        }
+    }
+
+    assertNull(incident.getCausedByChange());
+    assertNull(incident.getChangeNumber());
+}
