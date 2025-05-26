@@ -1,0 +1,74 @@
+@Test
+void testSetCausedByChangeWhenCausedByExists() {
+    // Arrange
+    List<String> types = Arrays.asList("Fixed By", "Caused By", "Verified");
+    List<String> numbers = Arrays.asList("CHG001", "CHG002", "CHG003");
+    IncidentTracker incident = new IncidentTracker();
+
+    // Act
+    for (int i = 0; i < types.size(); i++) {
+        String type = types.get(i).trim().toLowerCase();
+        if (type.contains("caused by")) {
+            String number = (i < numbers.size()) ? numbers.get(i) : "";
+            incident.setCausedByChange("Y");
+            incident.setChangeNumber(number);
+            break;
+        }
+    }
+
+    // Assert
+    assertEquals("Y", incident.getCausedByChange());
+    assertEquals("CHG002", incident.getChangeNumber());
+}
+
+@Test
+    void testPullRequestPage_withSuccessStatus() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("username", "Sathya");
+        session.setAttribute("role", "User");
+        session.setAttribute("team", "DMC");
+
+        mockMvc.perform(get("/pullRequest")
+                .param("status", "success")
+                .param("message", "Pull successful")
+                .session(session))
+            .andExpect(status().isOk())
+            .andExpect(view().name("pull/pullRequest")) // adjust if RETURN_PAGE_PULL_INCIDENT = "pull/pullRequest"
+            .andExpect(model().attribute("username", "Sathya"))
+            .andExpect(model().attribute("role", "User"))
+            .andExpect(model().attribute("team", "DMC"))
+            .andExpect(model().attribute("successMessage", "Pull successful"));
+    }
+
+    @Test
+    void testPullRequestPage_withErrorStatus() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("username", "Sathya");
+        session.setAttribute("role", "User");
+        session.setAttribute("team", "DMC");
+
+        mockMvc.perform(get("/pullRequest")
+                .param("status", "error")
+                .param("message", "Something went wrong")
+                .session(session))
+            .andExpect(status().isOk())
+            .andExpect(view().name("pull/pullRequest"))
+            .andExpect(model().attribute("errorMessage", "Something went wrong"));
+    }
+
+    @Test
+    void testPullRequestPage_withoutStatus() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("username", "Sathya");
+        session.setAttribute("role", "User");
+        session.setAttribute("team", "DMC");
+
+        mockMvc.perform(get("/pullRequest")
+                .session(session))
+            .andExpect(status().isOk())
+            .andExpect(view().name("pull/pullRequest"))
+            .andExpect(model().attribute("username", "Sathya"))
+            .andExpect(model().attribute("role", "User"))
+            .andExpect(model().attribute("team", "DMC"))
+            .andExpect(model().attributeDoesNotExist("successMessage", "errorMessage"));
+    }
