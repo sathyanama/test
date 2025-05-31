@@ -1,0 +1,15 @@
+prompt = generate_query_prompt(user_input, qid)
+            start_time = time.time()
+            splunk_query = mistral_generate(prompt, max_tokens=50).strip()
+            generation_time = time.time() - start_time
+
+            # Clean up formatting (smart quotes etc.)
+            splunk_query = splunk_query \
+                .replace('“', '"').replace('”', '"') \
+                .replace('‘', "'").replace('’', "'") \
+                .replace('–', '-') \
+                .replace('`', '"')
+
+            # Ensure it starts with 'search'
+            if not splunk_query.lower().startswith("search"):
+                splunk_query = "search " + splunk_query
