@@ -1,0 +1,51 @@
+import json
+
+def extract_gaia_content(result):
+    final_contents = []
+
+    for item in result:
+        # Case 1: it's a Content
+        if hasattr(item, "parts"):
+            for p in item.parts:
+                final_contents.extend(_process_text(p.text))
+
+        # Case 2: it's a Part
+        elif hasattr(item, "text"):
+            final_contents.extend(_process_text(item.text))
+
+        # Case 3: it's already a str
+        elif isinstance(item, str):
+            final_contents.extend(_process_text(item))
+
+    return final_contents
+
+
+def _process_text(txt: str):
+    """Check text and extract fields if fetcher/summarizer output."""
+    txt = txt.strip()
+    extracted = []
+
+    # Fetcher case
+    if "status" in txt and "data" in txt and "result" in txt:
+        try:
+            parsed = json.loads(txt.replace("'", '"'))
+            extracted.append({
+                "status": parsed.get("status"),
+                "results": parsed.get("data", {}).get("result")
+            })
+        except Exception:
+            extracted.append(txt)
+
+    # Summarizer case
+    elif "topic" in txt and "Summary_sentence_1" in txt:
+        try:
+            parsed = json.loads(txt)
+            summary_only = {"topic": parsed.get("topic")}
+            for k, v in parsed.items():
+                if k.lower().startswith("summary_sentence"):
+                    summary_only[k] = v
+            extracted.append(summary_only)
+        except Exception:
+            extracted.append(txt)
+
+    return extracted
