@@ -1,0 +1,35 @@
+def extract_gaia_content(result):
+    final_contents = []
+
+    for raw in result:  # raw is str like in your Item 1 / Item 2
+        match = re.search(r'text="(.+?)"', raw, re.DOTALL)
+        if not match:
+            continue
+
+        txt = match.group(1).strip()
+
+        # Case 1: Fetcher (status/data/result)
+        if "status" in txt and "data" in txt and "result" in txt:
+            try:
+                parsed = json.loads(txt.replace("'", '"'))
+                final_contents.append({
+                    "status": parsed.get("status"),
+                    "results": parsed.get("data", {}).get("result")
+                })
+            except Exception:
+                final_contents.append(txt)
+
+        # Case 2: Summarizer (topic + summary sentences 1..n)
+        elif "topic" in txt and "sentence" in txt.lower():
+            try:
+                parsed = json.loads(txt)
+                summary_only = {"topic": parsed.get("topic")}
+                for k, v in parsed.items():
+                    # catch both "summary_sentence_N" and "summar_sentence_N"
+                    if re.match(r"^summar(y)?_sentence_\d+$", k.lower()):
+                        summary_only[k] = v
+                final_contents.append(summary_only)
+            except Exception:
+                final_contents.append(txt)
+
+    return final_contents
