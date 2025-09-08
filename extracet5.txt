@@ -1,0 +1,35 @@
+import re, json
+
+def extract_gaia_content(result):
+    values = []
+
+    for raw in result:  # each item is a str
+        match = re.search(r'text="(.+?)"', raw, re.DOTALL)
+        if not match:
+            continue
+
+        txt = match.group(1).strip()
+
+        # Fetcher → only value
+        if "status" in txt and "data" in txt and "result" in txt:
+            try:
+                parsed = json.loads(txt.replace("'", '"'))
+                val = parsed.get("data", {}).get("result")
+                if isinstance(val, str):
+                    val = val.strip().lstrip("[").rstrip("]")
+                values.append(val)
+            except Exception:
+                values.append(txt)
+
+        # Summarizer → only values
+        elif "sentence" in txt.lower():
+            try:
+                parsed = json.loads(txt)
+                for k, v in parsed.items():
+                    if re.match(r"^summar(y)?_sentence_\d+$", k.lower()):
+                        values.append(v)
+            except Exception:
+                values.append(txt)
+
+    # 🔑 Final: return one big string, not a list
+    return "\n".join(values)
