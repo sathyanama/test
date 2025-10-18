@@ -1,0 +1,38 @@
+DROP TRIGGER sessions_ignore_dup_trg;
+
+SELECT trigger_name
+FROM user_triggers
+WHERE table_name = 'SESSIONS';
+
+CREATE OR REPLACE TRIGGER sessions_ignore_dup_trg
+BEFORE INSERT ON sessions
+FOR EACH ROW
+DECLARE
+    v_exists NUMBER;
+BEGIN
+    -- Check if this ID already exists
+    SELECT COUNT(*) INTO v_exists
+      FROM sessions
+     WHERE id = :NEW.id;
+
+    IF v_exists > 0 THEN
+        -- Prevent duplicate insert
+        :NEW.id := NULL;
+        :NEW.app_name := NULL;
+        :NEW.user_id := NULL;
+        :NEW.state := NULL;
+        GOTO skip_insert;
+    END IF;
+
+    <<skip_insert>>
+    NULL;
+END;
+/
+
+
+SHOW ERRORS TRIGGER sessions_ignore_dup_trg;
+
+
+
+
+
