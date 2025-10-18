@@ -1,0 +1,62 @@
+CREATE OR REPLACE TRIGGER sessions_ignore_dup_trg
+BEFORE INSERT ON sessions
+FOR EACH ROW
+DECLARE
+    v_exists NUMBER;
+BEGIN
+    -- Check if this ID already exists
+    SELECT COUNT(*) INTO v_exists
+      FROM sessions
+     WHERE id = :NEW.id;
+
+    IF v_exists > 0 THEN
+        -- Stop Oracle from inserting the duplicate row
+        RAISE_APPLICATION_ERROR(-20001, 'DUPLICATE_SESSION_SKIP_INSERT');
+    END IF;
+
+EXCEPTION
+    WHEN OTHERS THEN
+        -- Swallow our custom skip-insert error silently
+        IF SQLCODE = -20001 THEN
+            NULL;  -- ignore and allow SmartSDK to continue
+        ELSE
+            RAISE;
+        END IF;
+END;
+/
+
+
+
+==========
+
+
+CREATE TABLE sessions (
+    id VARCHAR2(10) PRIMARY KEY,
+    app_name VARCHAR2(20) NOT NULL,
+    user_id VARCHAR2(20) NOT NULL
+);
+
+CREATE OR REPLACE TRIGGER sessions_ignore_dup_trg
+BEFORE INSERT ON sessions
+FOR EACH ROW
+DECLARE
+    v_exists NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO v_exists FROM sessions WHERE id = :NEW.id;
+    IF v_exists > 0 THEN
+        RAISE_APPLICATION_ERROR(-20001, 'DUPLICATE_SESSION_SKIP_INSERT');
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        IF SQLCODE = -20001 THEN
+            NULL;
+        ELSE
+            RAISE;
+        END IF;
+END;
+/
+
+-- Test run
+INSERT INTO sessions VALUES ('A1', 'MAC', 'USER1');
+INSERT INTO sessions VALUES ('A1', 'MAC', 'USER1'); -- should be silently ignored
+SELECT * FROM sessions;
